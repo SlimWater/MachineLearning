@@ -42,8 +42,8 @@ class ConvLayer(object):
                 padded_array[:,zp:zp+input_height, zp:zp+input_width] = input_array
 
             elif input_array.ndim == 2:
-                input_width = input_array.shape[2]
-                input_height = input_array.shape[1]
+                input_width = input_array.shape[1]
+                input_height = input_array.shape[0]
                 padded_array = np.zeros((input_height+2*zp, input_width + 2*zp))
                 padded_array[zp:zp+input_height, zp:zp+input_width] = input_array
             else:
@@ -51,18 +51,29 @@ class ConvLayer(object):
                 print("\r\n Input array dimenstion is not supported")
             return padded_array
     def conv(self, input_array, kernel_array, output_array, stride, bias):
-        channel_num = input_array.ndim
         output_width = output_array.shape[1]
         output_height = output_array.shape[0]
         kernel_width = kernel_array.shape[-1]
         kernel_height = kernel_array.shape[-2]
-        temp_array = np.zeros((kernel_height,kernel_width))
         if input_array.ndim == 2:
-            for i in output_height:
-                for j in output_width:
-                    temp_array = input_array[i*stride:kernel_height, j*stride:kernel_width]
-                    output_array[i][j] = np.multiply(temp_array, kernel_array).sum()
+            for i in range(output_height):
+                for j in range(output_width):
+                    temp_array = input_array[i*stride:i*stride+kernel_height, j*stride:j*stride+kernel_width]
+                    output_array[i,j] = np.multiply(temp_array, kernel_array).sum() + bias
+
         elif input_array.ndim == 3:
+            for i in range(output_height):
+                for j in range(output_width):
+                    for m in range(input_array.shape[0]):
+                        if m == 0:
+                            temp_array_input = input_array[m, i*stride:i*stride+kernel_height, j*stride:j*stride+kernel_width]
+                            temp_array_filter = kernel_array
+                        else:
+                            temp_array_input = np.concatenate((temp_array_input, input_array[m, i*stride:i*stride+kernel_height, j*stride:j*stride+kernel_width]), axis = 0)
+                            temp_array_filter = np.concatenate((temp_array_filter, kernel_array), axis = 0)
+                    output_array[i, j] = np.multiply(temp_array_input, temp_array_filter).sum() + bias
+
+
 
 
 
