@@ -24,7 +24,7 @@ class ConvLayer(object):
 
     def forward(self, input_array):
         self.input_array = input_array
-        self.padded_input_array = ConvLayer.padding(input_array, self.zero_padding)
+        self.padded_input_array = self.padding(input_array, self.zero_padding)
         for f in range(self.filter_number):
             filter = self.filters[f]
             ConvLayer.conv(self.padded_input_array, filter.get_weights(), self.output_array[f], self.stride, filter.get_bias())
@@ -50,7 +50,9 @@ class ConvLayer(object):
                 padded_array = input_array
                 print("\r\n Input array dimenstion is not supported")
             return padded_array
+
     def conv(self, input_array, kernel_array, output_array, stride, bias):
+        #the output_array is a 3d matrix in this module. in this function the input is output_array[f]
         output_width = output_array.shape[1]
         output_height = output_array.shape[0]
         kernel_width = kernel_array.shape[-1]
@@ -58,6 +60,7 @@ class ConvLayer(object):
         if input_array.ndim == 2:
             for i in range(output_height):
                 for j in range(output_width):
+                    #numpy array range array[a:b] means a->b-1
                     temp_array = input_array[i*stride:i*stride+kernel_height, j*stride:j*stride+kernel_width]
                     output_array[i,j] = np.multiply(temp_array, kernel_array).sum() + bias
 
@@ -74,8 +77,30 @@ class ConvLayer(object):
                     output_array[i, j] = np.multiply(temp_array_input, temp_array_filter).sum() + bias
 
 
+    #now implement the training functions
+    def bp_sensitivity_map(self, sensitivity_array, activator):
+        #sensitivity_array: next layer sensitivity_map
+        #next layer activation function
+        #to calculate this layer sensitivity_map
+        expanded_array = self.expand_sensitivity_map(sensitivity_array)
+        # zp is always 1
+        zp = (self.input_width + self.filter_width - 1 - expanded_array.shape[2])/2
+        padded_expanded_array = self.padding(expanded_array, zp)
 
 
+
+    def expand_sensitivity_map(self, sensitivity_array):
+        # convert stride S array into stride 1 array
+        depth = sensitivity_array.shape[0]
+        expanded_width = self.input_width - self.filter_width + 2*self.zero_padding +1
+        expanded_height = self.input_height - self.filter_height + 2 * self.zero_padding + 1
+        expand_array =  np.zeros((depth, expanded_height,expanded_width))
+        for i in range(self.output_height):
+            for j in range(self.output_width):
+                i_pos = i*self.stride
+                j_pos = j*self.stride
+                expand_array[:,i_pos,j_pos] = sensitivity_array[:,i, j]
+        return expand_array
 
 class Filter(object):
     def __init__(self, width, height, depth):
