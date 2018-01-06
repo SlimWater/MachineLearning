@@ -19,6 +19,7 @@ class ConvLayer(object):
         self.output_array = np.zeros((int(self.filter_number), int(self.output_height), int(self.output_width)))
         for i in range(filter_number):
             self.filters.append(Filter(filter_width, filter_height, channel_number))
+        self.delta_array = self.create_delta_array()
         self.activator = activator
         self.learning_rate = learning_rate
 
@@ -53,8 +54,9 @@ class ConvLayer(object):
 
     def conv(self, input_array, kernel_array, output_array, stride, bias):
         #the output_array is a 3d matrix in this module. in this function the input is output_array[f]
-        output_width = output_array.shape[1]
-        output_height = output_array.shape[0]
+        output_width = output_array.shape[2]
+        output_height = output_array.shape[1]
+        output_depth = output_array.shape[0]
         kernel_width = kernel_array.shape[-1]
         kernel_height = kernel_array.shape[-2]
         if input_array.ndim == 2:
@@ -65,27 +67,43 @@ class ConvLayer(object):
                     output_array[i,j] = np.multiply(temp_array, kernel_array).sum() + bias
 
         elif input_array.ndim == 3:
-            for i in range(output_height):
-                for j in range(output_width):
-                    for m in range(input_array.shape[0]):
-                        if m == 0:
+            for k in range(output_depth):
+                for i in range(output_height):
+                    for j in range(output_width):
+                        for m in range(input_array.shape[0]):
                             temp_array_input = input_array[m, i*stride:i*stride+kernel_height, j*stride:j*stride+kernel_width]
-                            temp_array_filter = kernel_array
-                        else:
-                            temp_array_input = np.concatenate((temp_array_input, input_array[m, i*stride:i*stride+kernel_height, j*stride:j*stride+kernel_width]), axis = 0)
-                            temp_array_filter = np.concatenate((temp_array_filter, kernel_array), axis = 0)
-                    output_array[i, j] = np.multiply(temp_array_input, temp_array_filter).sum() + bias
+                            temp_array_filter = kernel_array[k,m,:,:]
+                            output_array[k, i, j] += np.multiply(temp_array_input, temp_array_filter).sum()
+                        output_array[k,i,j] += bias
 
 
     #now implement the training functions
     def bp_sensitivity_map(self, sensitivity_array, activator):
-        #sensitivity_array: next layer sensitivity_map
-        #next layer activation function
-        #to calculate this layer sensitivity_map
+        #sensitivity_array: current layer sensitivity_map
+        #upper layer activation function
+        #to calculate upper layer sensitivity_map
         expanded_array = self.expand_sensitivity_map(sensitivity_array)
         # zp is always 1
         zp = (self.input_width + self.filter_width - 1 - expanded_array.shape[2])/2
         padded_expanded_array = self.padding(expanded_array, zp)
+        #rotate filter 180
+        #did not implement channels as I surpose that filter are transparent for all input channels
+        for f in range(self.filter_number):
+            filter = self.filters[f]
+            flipped_weights = np.rot90(filter.get_wieghts(),2)
+            delta_array = self.create_delta_array()
+            for d in range(self.channel_number):
+                self.conv(expanded_array,flipped_weights[d],delta_array[d],stride=1,bias =0)
+            self.delta_array += delta_array
+        derivative_array = self.elementOP(self.input_array, activator)
+        self.delta_array *= derivative_array
+
+    def bp_gradient(self, sensitivity_array):
+        expanded_sensitivity_array = self.expand_sensitivity_map(sensitivity_array)
+        for f in range(self.filter_number):
+            filter = self.filters[f]
+            self.conv(self.padded_input_array,expanded_sensitivity_array,filter.weights_grad,1,0)
+            filter.bias_grad = expanded_sensitivity_array[f].sum()
 
 
 
@@ -101,6 +119,19 @@ class ConvLayer(object):
                 j_pos = j*self.stride
                 expand_array[:,i_pos,j_pos] = sensitivity_array[:,i, j]
         return expand_array
+
+    def create_delta_array(self):
+        return np.zeros((self.channel_number, self.input_height, self.input_width))
+
+    def elementOP(self, input_array, activator):
+        output_array = np.zeros((input_array.shape))
+        for i in range(input_array.shape[0]):
+            for j in range(input_array.shape[1]):
+                for m in range(input_array.shape[2]):
+                    output_array[i,j,m] = activator.backward(input_array[i,j,m])
+        return output_array
+
+
 
 class Filter(object):
     def __init__(self, width, height, depth):
@@ -118,3 +149,8 @@ class Filter(object):
         self.weights = self.weights-learning_rate*self.weights_grad
         self.bias = self.bias - learning_rate*self.bias_grad
 
+class ReluActivator(object):
+    def forward(self, weighted_input):
+        return max(0, weighted_input)
+    def backward(self, output):
+        return 1 if output > 0 else 0
