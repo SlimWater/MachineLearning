@@ -29,6 +29,7 @@ class ConvLayer(object):
         for f in range(self.filter_number):
             filter = self.filters[f]
             ConvLayer.conv(self.padded_input_array, filter.get_weights(), self.output_array[f], self.stride, filter.get_bias())
+            self.output_array[f] = self.elementOP(self.output_array[f], self.activator, "forward")
         #element_wist_op(self.output_array, self.activator.forward) activation function implementation
 
     def padding(self, input_array, zp):
@@ -95,7 +96,7 @@ class ConvLayer(object):
             for d in range(self.channel_number):
                 self.conv(expanded_array,flipped_weights[d],delta_array[d],stride=1,bias =0)
             self.delta_array += delta_array
-        derivative_array = self.elementOP(self.input_array, activator)
+        derivative_array = self.elementOP(self.input_array, activator, "backward")
         self.delta_array *= derivative_array
 
     def bp_gradient(self, sensitivity_array):
@@ -105,7 +106,9 @@ class ConvLayer(object):
             self.conv(self.padded_input_array,expanded_sensitivity_array,filter.weights_grad,1,0)
             filter.bias_grad = expanded_sensitivity_array[f].sum()
 
-
+    def update(self):
+        for filter in self.filters:
+            filter.update(self.learning_rate)
 
     def expand_sensitivity_map(self, sensitivity_array):
         # convert stride S array into stride 1 array
@@ -123,12 +126,16 @@ class ConvLayer(object):
     def create_delta_array(self):
         return np.zeros((self.channel_number, self.input_height, self.input_width))
 
-    def elementOP(self, input_array, activator):
+    def elementOP(self, input_array, activator,direction):
+
         output_array = np.zeros((input_array.shape))
         for i in range(input_array.shape[0]):
             for j in range(input_array.shape[1]):
                 for m in range(input_array.shape[2]):
-                    output_array[i,j,m] = activator.backward(input_array[i,j,m])
+                    if direction == "forward":
+                        output_array[i,j,m] = activator.forward(input_array[i,j,m])
+                    elif direction == "backward":
+                        output_array[i, j, m] = activator.forward(input_array[i, j, m])
         return output_array
 
 
@@ -139,8 +146,7 @@ class Filter(object):
         self.bias = 0
         self.weights_grad = np.zeros(self.weights.shape)
         self.bias_grad = 0
-    def __repr__(self):
-        return "filter weights:\n%s\nbias:\n%s" (repr(self.weights), repr(self.bias))
+
     def get_wieghts(self):
         return self.weights
     def get_bias(self):
