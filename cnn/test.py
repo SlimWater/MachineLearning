@@ -57,8 +57,8 @@ def gradient_check():
     error_function = lambda o: o.sum()
     a, b, cl = init_test()
     cl.forward(a)
-    sensitivity_array = np.ones(cl.output_array.shape, dtpye = np.float64)
-    cl.backward(a, sensitivity_array, cl.activator)
+    sensitivity_array = np.ones(cl.output_array.shape, dtype = np.float64)
+    cl.backward(sensitivity_array, cl.activator)
 
     epsilon = 10e-4
     for d in range(cl.filters[0].weights_grad.shape[0]):
@@ -83,7 +83,7 @@ def test_bp():
     a, b, cl = init_test()
     cl.backward(a, cl.activator)
     cl.update()
-    print (cl.filters[0])
-    print (cl.filters[1])
+    print (cl.filters[0].get_weights())
+    print (cl.filters[1].get_weights())
 
-test_bp()
+gradient_check()
