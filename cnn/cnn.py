@@ -13,7 +13,7 @@ class ConvLayer(object):
         self.stride = stride
         self.filters = []
         self.input_array = np.zeros((self.channel_number,self.input_height, self.input_width))
-        self.input_padded_array = np.zeros((self.channel_number, int(self.input_height+2*self.zero_padding), int(self.input_width+2*self.zero_padding)))
+        self.padded_input_array = np.zeros((self.channel_number, int(self.input_height+2*self.zero_padding), int(self.input_width+2*self.zero_padding)))
         # W = (W_input - filter_width + 2* zero_padding)/stride +1
         # H = (H_input - filter_width + 2*zero_padding)/stride +1
         self.output_width = (self.input_width - self.filter_width + 2*self.zero_padding)/self.stride +1
@@ -31,7 +31,8 @@ class ConvLayer(object):
         for f in range(self.filter_number):
             filter = self.filters[f]
             self.conv(self.padded_input_array, filter.get_weights(), self.output_array[f], self.stride, filter.get_bias())
-            self.output_array[f] = self.elementOP(self.output_array[f], self.activator, "forward")
+
+            #self.output_array[f] = self.elementOP(self.output_array[f], self.activator, "forward")
         #element_wist_op(self.output_array, self.activator.forward) activation function implementation
 
     def padding(self, input_array, zp):
@@ -62,51 +63,60 @@ class ConvLayer(object):
         output_height = output_array.shape[0]
         kernel_width = kernel_array.shape[-1]
         kernel_height = kernel_array.shape[-2]
-        if input_array.shape[0] == 3:
+        if input_array.ndim == 3:
             for i in range(output_height):
                 for j in range(output_width):
                     output_array[i, j] = 0
                     for m in range(input_array.shape[0]):
                         temp_array_input = input_array[m, int(i*stride):int(i*stride+kernel_height), int(j*stride):int(j*stride+kernel_width)]
-                        temp_array_filter = kernel_array[m]
-                        output_array[i, j] += np.multiply(temp_array_input, temp_array_filter).sum()
-                    output_array[i,j] += bias
-        elif input_array.shape[0] == 2:
+                        if kernel_array.ndim == 1:
+                            output_array[i, j] = output_array[i, j]+ np.multiply(temp_array_input, kernel_array).sum()
+                        else:
+                            temp_array_filter = kernel_array[m]
+                            output_array[i, j] = output_array[i, j] + np.multiply(temp_array_input, temp_array_filter).sum()
+                    output_array[i,j] = output_array[i,j] + bias
+        elif input_array.ndim == 2:
             for i in range(output_height):
                 for j in range(output_width):
                      temp_array_input = input_array[int(i*stride):int(i*stride+kernel_height), int(j*stride):int(j*stride+kernel_width)]
                      output_array[i, j] = np.multiply(temp_array_input, kernel_array).sum() + bias
-
+            #print(output_array)
 
     #now implement the training functions
-    def backward(self, sensitivity_array, activator):
+    def backward(self, input_array, sensitivity_array, activator):
+        self.input_array = input_array
+        self.padded_input_array = self.padding(input_array, self.zero_padding)
         #sensitivity_array: current layer sensitivity_map
         #upper layer activation function
         #to calculate upper layer sensitivity_map
         expanded_array = self.expand_sensitivity_map(sensitivity_array)
+
         # zp is always 1
         zp = (self.input_width + self.filter_width - 1 - expanded_array.shape[2])/2
         padded_expanded_array = self.padding(expanded_array, zp)
         self.delta_array[:,:,:] = 0
+        delta_array = self.create_delta_array()
         #rotate filter 180
         #did not implement channels as I surpose that filter are transparent for all input channels
         for f in range(self.filter_number):
             filter = self.filters[f]
-            flipped_weights = np.rot90(filter.get_weights(),2)
-            delta_array = self.create_delta_array()
+            delta_array[:, :, :] = 0
             for d in range(self.channel_number):
-                self.conv(expanded_array[f],flipped_weights[d],delta_array[d],stride=1,bias =0)
-                self.delta_array[d] += delta_array[d]
+                flipped_weights = np.rot90(filter.get_weights()[d], 2)
+                self.conv(padded_expanded_array[f],flipped_weights,delta_array[d],stride=1,bias =0)
+                self.delta_array[d] = self.delta_array[d] + delta_array[d]
+
         derivative_array = self.elementOP(self.input_array, activator, "backward")
         self.delta_array *= derivative_array
+        self.bp_gradient(sensitivity_array)
 
     def bp_gradient(self, sensitivity_array):
         expanded_sensitivity_array = self.expand_sensitivity_map(sensitivity_array)
         for f in range(self.filter_number):
             filter = self.filters[f]
-            self.conv(self.padded_input_array,expanded_sensitivity_array,filter.weights_grad,1,0)
+            for d in range(filter.weights.shape[0]):
+                self.conv(self.padded_input_array[d],expanded_sensitivity_array[f],filter.weights_grad[d],1,0)
             filter.bias_grad = expanded_sensitivity_array[f].sum()
-
     def update(self):
         for filter in self.filters:
             filter.update(self.learning_rate)

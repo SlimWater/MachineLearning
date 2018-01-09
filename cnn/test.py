@@ -1,6 +1,7 @@
 import cnn
 import importlib
 import numpy as np
+import copy
 #make sure module is updated
 importlib.reload(cnn)
 
@@ -51,6 +52,7 @@ def init_test():
          [[-1,0,0],
           [-1,0,1],
           [-1,0,0]]], dtype=np.float64)
+    cl.filters[1].bias = 1
 
     return a, b, cl
 def gradient_check():
@@ -58,9 +60,10 @@ def gradient_check():
     a, b, cl = init_test()
     cl.forward(a)
     sensitivity_array = np.ones(cl.output_array.shape, dtype = np.float64)
-    cl.backward(sensitivity_array, cl.activator)
-
+    cl.backward(a,sensitivity_array, cl.activator)
     epsilon = 10e-4
+
+    #'''
     for d in range(cl.filters[0].weights_grad.shape[0]):
         for i in range(cl.filters[0].weights_grad.shape[1]):
             for j in range(cl.filters[0].weights_grad.shape[2]):
@@ -70,20 +73,35 @@ def gradient_check():
                 cl.filters[0].weights[d,i,j] -= 2*epsilon
                 cl.forward(a)
                 err2 = error_function(cl.output_array)
+
                 expect_grad = (err1 - err2) / (2 * epsilon)
                 cl.filters[0].weights[d,i,j] += epsilon
                 print ('weights(%d,%d,%d): expected - actural %f - %f' % ( d, i, j, expect_grad, cl.filters[0].weights_grad[d,i,j]))
-
+    #'''
 def test():
     a, b, cl = init_test()
     cl.forward(a)
-    print (cl.output_array)
+    print (cl.output_array.sum())
 
 def test_bp():
     a, b, cl = init_test()
-    cl.backward(a, cl.activator)
+    sensitivity_array = np.ones(cl.output_array.shape, dtype=np.float64)
+    cl.backward(a,sensitivity_array, cl.activator)
+    #cl.update()
+
+#'''
+    print ('Befor filer0')
+    print( cl.filters[0].get_weights())
+    print ('Befor filer1')
+    print( cl.filters[1].get_weights())
+    print('*****************************')
     cl.update()
     print (cl.filters[0].get_weights())
+    print('*****************************')
     print (cl.filters[1].get_weights())
+#'''
 
+#test()
+#test_bp()
 gradient_check()
+
