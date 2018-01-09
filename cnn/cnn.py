@@ -32,7 +32,7 @@ class ConvLayer(object):
             filter = self.filters[f]
             self.conv(self.padded_input_array, filter.get_weights(), self.output_array[f], self.stride, filter.get_bias())
 
-            #self.output_array[f] = self.elementOP(self.output_array[f], self.activator, "forward")
+            self.output_array[f] = self.elementOP(self.output_array[f], self.activator, "forward")
         #element_wist_op(self.output_array, self.activator.forward) activation function implementation
 
     def padding(self, input_array, zp):
@@ -179,3 +179,34 @@ class ReluActivator(object):
         return max(0, weighted_input)
     def backward(self, output):
         return 1 if output > 0 else 0
+
+class MaxPolling(object):
+    def __init__(self,input_width, input_height, channel_number, filter_width, filter_height, stride):
+        self.input_width = input_width
+        self.input_height = input_height
+        self.channel_number = channel_number
+        self.filter_width = filter_width
+        self.filter_height =filter_height
+        self.stride = stride
+
+        self.output_height = int((input_height -filter_height)/stride +1)
+        self.output_width = int((input_width - filter_width)/stride +1)
+        self.output_array = np.zeros((self.channel_number, self.output_height,self.output_width))
+    def forward(self, input_array):
+        self.input_array = input_array
+        for d in range(self.channel_number):
+            for i in range(self.output_height):
+                for j in range(self.output_width):
+                    self.output_array[d,i,j] = input_array[d, int(i*self.stride):int(i*self.stride + self.filter_height), int(j*self.stride):int(j*self.stride + self.filter_width)].max()
+    def backward(self, sensitivity_array):
+        self.delta_array = np.zeros((self.channel_number, self.input_height, self.input_width))
+        for d in range(self.channel_number):
+            for i in range(self.output_height):
+                for j in range(self.output_width):
+                    a = self.input_array[d, int(i * self.stride):int(i * self.stride + self.filter_height),int(j * self.stride):int(j * self.stride + self.filter_width)]
+                    index = np.where(a == a.max())
+                    for m in range(len(index[0])):
+                        self.delta_array[d, int(i*self.stride + index[0][m]), int(j*self.stride + index[1][m])] = sensitivity_array[d, i, j]
+
+
+

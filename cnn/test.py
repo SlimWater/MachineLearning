@@ -81,7 +81,8 @@ def gradient_check():
 def test():
     a, b, cl = init_test()
     cl.forward(a)
-    print (cl.output_array.sum())
+    index = np.where(a == a.max())
+    print (index)
 
 def test_bp():
     a, b, cl = init_test()
@@ -100,8 +101,20 @@ def test_bp():
     print('*****************************')
     print (cl.filters[1].get_weights())
 #'''
+def polling_test():
+    a, b, cl = init_test()
+    polling = cnn.MaxPolling(5,5,3,3,3,2)
+    polling.forward(a)
+    sensitivity_array = np.ones((3,2,2), dtype=np.float64)
+    polling.backward(sensitivity_array)
+    print(a)
+    print(polling.output_array)
+    print(polling.delta_array)
+
+
 
 #test()
 #test_bp()
-gradient_check()
+#gradient_check()
+polling_test()
 
