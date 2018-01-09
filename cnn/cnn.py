@@ -208,5 +208,67 @@ class MaxPolling(object):
                     for m in range(len(index[0])):
                         self.delta_array[d, int(i*self.stride + index[0][m]), int(j*self.stride + index[1][m])] = sensitivity_array[d, i, j]
 
+class fc(object):
+    def __init__(self, input_length, output_length,learning_rate,activator):
+        self.input_length = input_length
+        self.output_length = output_length
+        self.output_array = np.zeros((1,output_length))
+        self.filter_number = output_length
+        self.activator = activator
+        self.learning_rate = learning_rate
+        self.filters = []
+        for i in range(self.filter_number):
+            self.filters.append(Filter(self.input_length,1,1))
+        self.delta_array = np.zeros((1,self.input_length))
 
 
+
+    def forward(self, input_array):
+        if input_array.ndim == 3:
+            if self.input_length == input_array.shape[0]*input_array.shape[1]*input_array.shape[2]:
+                self.input_array = input_array.reshape(self.input_length)
+                for f in range(self.filter_number):
+                    filter = self.filters[f]
+                    self.output_array[f] = np.multiply(self.input_array, filter.get_weights()).sum() + filter.get_bias()
+                self.output_array = self.elementOP(self.output_array,self.activator, "forward")
+            else:
+                print("Length of input array is not correct!")
+                return
+        elif input_array.ndim == 2:
+            if self.input_length == input_array.shape[0]*input_array.shape[1]:
+                self.input_array = input_array.reshape(self.input_length)
+                for f in range(self.filter_number):
+                    filter = self.filters[f]
+                    self.output_array[f] = np.multiply(self.input_array, filter.get_weights()).sum() + filter.get_bias()
+            else:
+                print("Length of input array is not correct!")
+                return
+        else:
+            print("Incorrect input data array dimension!")
+
+    def backward(self, sensitivity_array):
+        self.delta_array[:] = 0
+        for i in self.output_length:
+            self.delta_array += sensitivity_array[i]*self.filters[i].get_weights()
+        derivative_array = self.elementOP(self.input_array,self.activator,"backward")
+        self.delta_array *= derivative_array
+
+
+    def elementOP(self, input_array, activator,direction):
+        output_array = np.zeros((input_array.shape))
+        for i in range(input_array.shape[0]):
+            if direction == "forward":
+                output_array[i] = activator.forward(input_array[i])
+            else:
+                output_array[i] = activator.backward(input_array[i])
+        return output_array
+
+    def bp_gradient(self, sensitivity_array):
+        for f in range(self.filter_number):
+            filter = self.filters[f]
+            filter.weights_grad = self.input_array*sensitivity_array[f]
+            filter.bias_grad = sensitivity_array[f]
+
+    def update(self):
+        for filter in self.filters:
+            filter.update(self.learning_rate)
