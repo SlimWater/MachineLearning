@@ -20,7 +20,7 @@ class ConvLayer(object):
         self.output_height= (self.input_height - self.filter_height + 2*self.zero_padding)/self.stride +1
         self.output_array = np.zeros((int(self.filter_number), int(self.output_height), int(self.output_width)))
         for i in range(filter_number):
-            self.filters.append(Filter(filter_width, filter_height, channel_number))
+            self.filters.append(Filter( channel_number,  filter_height,filter_width))
         self.delta_array = self.create_delta_array()
         self.activator = activator
         self.learning_rate = learning_rate
@@ -83,9 +83,9 @@ class ConvLayer(object):
             #print(output_array)
 
     #now implement the training functions
-    def backward(self, input_array, sensitivity_array, activator):
-        self.input_array = input_array
-        self.padded_input_array = self.padding(input_array, self.zero_padding)
+    def backward(self, sensitivity_array):
+        #self.input_array = input_array
+        #self.padded_input_array = self.padding(input_array, self.zero_padding)
         #sensitivity_array: current layer sensitivity_map
         #upper layer activation function
         #to calculate upper layer sensitivity_map
@@ -106,7 +106,7 @@ class ConvLayer(object):
                 self.conv(padded_expanded_array[f],flipped_weights,delta_array[d],stride=1,bias =0)
                 self.delta_array[d] = self.delta_array[d] + delta_array[d]
 
-        derivative_array = self.elementOP(self.input_array, activator, "backward")
+        derivative_array = self.elementOP(self.input_array, self.activator, "backward")
         self.delta_array *= derivative_array
         self.bp_gradient(sensitivity_array)
 
@@ -160,9 +160,9 @@ class ConvLayer(object):
 
 
 class Filter(object):
-    def __init__(self, width, height, depth):
+    def __init__(self, depth, height, width):
         self.weights = np.random.uniform(-1e-4, 1e-4,(depth,height, width))
-        self.bias = 0
+        self.bias = 0.5
         self.weights_grad = np.zeros(self.weights.shape)
         self.bias_grad = 0
 
@@ -199,6 +199,7 @@ class MaxPolling(object):
                 for j in range(self.output_width):
                     self.output_array[d,i,j] = input_array[d, int(i*self.stride):int(i*self.stride + self.filter_height), int(j*self.stride):int(j*self.stride + self.filter_width)].max()
     def backward(self, sensitivity_array):
+        sens_array_reshape = sensitivity_array.reshape(self.output_array.shape)
         self.delta_array = np.zeros((self.channel_number, self.input_height, self.input_width))
         for d in range(self.channel_number):
             for i in range(self.output_height):
@@ -206,7 +207,7 @@ class MaxPolling(object):
                     a = self.input_array[d, int(i * self.stride):int(i * self.stride + self.filter_height),int(j * self.stride):int(j * self.stride + self.filter_width)]
                     index = np.where(a == a.max())
                     for m in range(len(index[0])):
-                        self.delta_array[d, int(i*self.stride + index[0][m]), int(j*self.stride + index[1][m])] = sensitivity_array[d, i, j]
+                        self.delta_array[d, int(i*self.stride + index[0][m]), int(j*self.stride + index[1][m])] = sens_array_reshape[d, i, j]
 
 class fc(object):
     def __init__(self, input_length, output_length,activator,learning_rate):
@@ -218,8 +219,8 @@ class fc(object):
         self.learning_rate = learning_rate
         self.filters = []
         for i in range(self.filter_number):
-            self.filters.append(Filter(self.input_length,1,1))
-        self.delta_array = np.zeros((1,self.input_length))
+            self.filters.append(Filter(1,1, self.input_length))
+        self.delta_array = np.zeros((self.input_length))
 
 
 
@@ -243,13 +244,16 @@ class fc(object):
             else:
                 print("Length of input array is not correct!")
                 return
+        elif input_array.ndim == 1:
+            if self.input_length == input_array.shape[0]:
+                self.input_array = input_array
         else:
             print("Incorrect input data array dimension!")
 
     def backward(self, sensitivity_array):
         self.delta_array[:] = 0
         for i in range(self.output_length):
-            self.delta_array += sensitivity_array[i]*self.filters[i].get_weights()
+            self.delta_array += sensitivity_array[i]*self.filters[i].get_weights().reshape(self.input_length)
         derivative_array = self.elementOP(self.input_array,self.activator,"backward")
         self.delta_array *= derivative_array
         self.bp_gradient(sensitivity_array)
