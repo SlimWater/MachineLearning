@@ -1,9 +1,11 @@
 import cnn
+import loadData
 import importlib
 import numpy as np
 import copy
 #make sure module is updated
 importlib.reload(cnn)
+importlib.reload(loadData)
 def init_fc_test():
     a = np.array(
         [[[0,1,1,0,2],
@@ -153,12 +155,24 @@ def fc_test():
     print(fc.filters[0].get_weights())
 
 
-
-
+def loadData_test():
+    file_path_tl = '/home/xinying/PycharmProjects/MachineLearning/dataset/mnist/test_labels'
+    file_path_ti = '/home/xinying/PycharmProjects/MachineLearning/dataset/mnist/test_images'
+    file_path_trl = '/home/xinying/PycharmProjects/MachineLearning/dataset/mnist/training_labels'
+    file_path_tri = '/home/xinying/PycharmProjects/MachineLearning/dataset/mnist/training_images'
+    test_lables = loadData.mnist.load_test_labels(file_path_tl)
+    test_images = loadData.mnist.load_test_images(file_path_ti)
+    training_lables = loadData.mnist.load_training_labels(file_path_trl)
+    training_images = loadData.mnist.load_training_images(file_path_tri)
+    print(test_lables[0])
+    print(test_images[0])
+    print(training_lables[0])
+    print(training_images[0])
 #test()
+#test_bp()
 #test_bp()
 #gradient_check()
 #polling_test()
-fc_test()
-
+#fc_test()
+loadData_test()
 
