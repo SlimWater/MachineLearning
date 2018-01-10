@@ -4,6 +4,36 @@ import numpy as np
 import copy
 #make sure module is updated
 importlib.reload(cnn)
+def init_fc_test():
+    a = np.array(
+        [[[0,1,1,0,2],
+          [2,2,2,2,1],
+          [1,0,0,2,0],
+          [0,1,1,0,0],
+          [1,2,0,0,2]],
+         [[1,0,2,2,0],
+          [0,0,0,2,0],
+          [1,2,1,2,1],
+          [1,0,0,0,0],
+          [1,2,1,1,1]],
+         [[2,1,2,0,0],
+          [1,0,0,1,0],
+          [0,2,1,0,1],
+          [0,1,2,2,2],
+          [2,1,0,0,1]]])
+    b = np.array(
+        [[[0,1,1],
+          [2,2,2],
+          [1,0,0]],
+         [[1,0,2],
+          [0,0,0],
+          [1,2,1]]])
+    relu = cnn.ReluActivator()
+    fc = cnn.fc(18,3,relu,0.001)
+    for filter in fc.filters:
+        filter.weights = np.random.randint(2,size = 18)
+        filter.bias = 0
+    return a, b, fc
 
 def init_test():
     a = np.array(
@@ -111,10 +141,24 @@ def polling_test():
     print(polling.output_array)
     print(polling.delta_array)
 
+def fc_test():
+    a,b,fc = init_fc_test()
+    fc.forward(b)
+    sensitivity_array = np.ones((3), dtype=np.float64)
+    fc.backward(sensitivity_array)
+    print(fc.input_array)
+    print(fc.filters[0].get_weights())
+    print(fc.filters[0].weights_grad)
+    fc.update()
+    print(fc.filters[0].get_weights())
+
+
 
 
 #test()
 #test_bp()
 #gradient_check()
-polling_test()
+#polling_test()
+fc_test()
+
 

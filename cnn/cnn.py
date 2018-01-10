@@ -209,10 +209,10 @@ class MaxPolling(object):
                         self.delta_array[d, int(i*self.stride + index[0][m]), int(j*self.stride + index[1][m])] = sensitivity_array[d, i, j]
 
 class fc(object):
-    def __init__(self, input_length, output_length,learning_rate,activator):
+    def __init__(self, input_length, output_length,activator,learning_rate):
         self.input_length = input_length
         self.output_length = output_length
-        self.output_array = np.zeros((1,output_length))
+        self.output_array = np.zeros((output_length))
         self.filter_number = output_length
         self.activator = activator
         self.learning_rate = learning_rate
@@ -248,10 +248,11 @@ class fc(object):
 
     def backward(self, sensitivity_array):
         self.delta_array[:] = 0
-        for i in self.output_length:
+        for i in range(self.output_length):
             self.delta_array += sensitivity_array[i]*self.filters[i].get_weights()
         derivative_array = self.elementOP(self.input_array,self.activator,"backward")
         self.delta_array *= derivative_array
+        self.bp_gradient(sensitivity_array)
 
 
     def elementOP(self, input_array, activator,direction):
