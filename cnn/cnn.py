@@ -162,7 +162,7 @@ class ConvLayer(object):
 class Filter(object):
     def __init__(self, depth, height, width):
         self.weights = np.random.uniform(-1e-4, 1e-4,(depth,height, width))
-        self.bias = 0.5
+        self.bias = 0.01
         self.weights_grad = np.zeros(self.weights.shape)
         self.bias_grad = 0
 
@@ -241,12 +241,17 @@ class fc(object):
                 for f in range(self.filter_number):
                     filter = self.filters[f]
                     self.output_array[f] = np.multiply(self.input_array, filter.get_weights()).sum() + filter.get_bias()
+                    self.output_array = self.elementOP(self.output_array, self.activator, "forward")
             else:
                 print("Length of input array is not correct!")
                 return
         elif input_array.ndim == 1:
             if self.input_length == input_array.shape[0]:
                 self.input_array = input_array
+                for f in range(self.filter_number):
+                    filter = self.filters[f]
+                    self.output_array[f] = np.multiply(self.input_array, filter.get_weights()).sum() + filter.get_bias()
+                    self.output_array = self.elementOP(self.output_array, self.activator, "forward")
         else:
             print("Incorrect input data array dimension!")
 

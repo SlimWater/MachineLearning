@@ -19,7 +19,7 @@ training_images = loadData.mnist.load_training_images(file_path_tri)
 
 epoches  = 10
 learning_rate = 0.001
-num_training = 60000
+num_training = 100
 success_count = 0
 relu = cnn.ReluActivator()
 # lenet5 INPUT(32X32)->Conv1(6X28X28)->Submap2(6X14X14)->Conv3(16X10X10)->Submap4(16X5X5)->fc5(120)->fc6(84)->output(10)
@@ -29,24 +29,43 @@ submap2 = cnn.MaxPolling(28,28,6,2,2,2)
 conv3 = cnn.ConvLayer(14,14,6,5,5,16,0,1,relu,learning_rate)
 submap4 = cnn.MaxPolling(10,10,16,2,2,2)
 fc5 = cnn.fc(400,84,relu,learning_rate)
+'''
+for filter in fc5.filters:
+    filter.weights = np.random.uniform(-0.1,0.1, (84,400))
+    filter.bias = 0
+'''
 fc6 = cnn.fc(84,10,relu,learning_rate)
-output_sensitivity_array = np.ones(10)*(-1)
+'''
+for filter in fc6.filters:
+    filter.weights = np.random.uniform(-0.1,0.1, (10,84))
+    filter.bias = 0
+'''
 
 ####Training######
 for i in range(epoches):
     success_count = 0
     for j in range(num_training):
+        print(training_images[j])
         conv1.forward(training_images[j])
+
         submap2.forward(conv1.output_array)
+
         conv3.forward(submap2.output_array)
+
         submap4.forward(conv3.output_array)
+        #print(submap4.output_array)
+
         fc5.forward(submap4.output_array)
+        #print(fc5.output_array)
         fc6.forward(fc5.output_array)
-        if training_lables[i] == fc6.output_array.argmax():
-            success_count +=1
+        #print(fc6.output_array)
+        #print(training_lables[j], fc6.output_array.argmax())
+        if training_lables[j] == fc6.output_array.argmax():
+           success_count +=1
+
         else:
             output_sensitivity_array = np.ones(10)
-            output_sensitivity_array[training_lables[i]] = -1.0
+            #output_sensitivity_array[training_lables[i]] = -1.0
             fc6.backward(output_sensitivity_array)
             fc6.update()
             fc5.backward(fc6.delta_array)
@@ -59,4 +78,4 @@ for i in range(epoches):
             conv1.update()
 
     error_rate = success_count/60000.0*100
-    print("Error rate for epoche %d is: %f %" % (i,error_rate))
+    print("Error rate for epoche %d is: %f" % (i,error_rate))
