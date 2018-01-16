@@ -162,7 +162,7 @@ class ConvLayer(object):
 class Filter(object):
     def __init__(self, depth, height, width):
         self.weights = np.random.uniform(-1e-4, 1e-4,(depth,height, width))
-        self.bias = 0.01
+        self.bias = 0
         self.weights_grad = np.zeros(self.weights.shape)
         self.bias_grad = 0
 

@@ -17,9 +17,9 @@ test_images = loadData.mnist.load_test_images(file_path_ti)
 training_lables = loadData.mnist.load_training_labels(file_path_trl)
 training_images = loadData.mnist.load_training_images(file_path_tri)
 
-epoches  = 10
-learning_rate = 0.001
-num_training = 100
+epoches  = 1
+learning_rate = 0.0001
+num_training = 60000
 success_count = 0
 relu = cnn.ReluActivator()
 # lenet5 INPUT(32X32)->Conv1(6X28X28)->Submap2(6X14X14)->Conv3(16X10X10)->Submap4(16X5X5)->fc5(120)->fc6(84)->output(10)
@@ -45,7 +45,6 @@ for filter in fc6.filters:
 for i in range(epoches):
     success_count = 0
     for j in range(num_training):
-        print(training_images[j])
         conv1.forward(training_images[j])
 
         submap2.forward(conv1.output_array)
@@ -58,14 +57,14 @@ for i in range(epoches):
         fc5.forward(submap4.output_array)
         #print(fc5.output_array)
         fc6.forward(fc5.output_array)
-        #print(fc6.output_array)
-        #print(training_lables[j], fc6.output_array.argmax())
+        print(fc6.output_array)
+        print(training_lables[j], fc6.output_array.argmax())
         if training_lables[j] == fc6.output_array.argmax():
            success_count +=1
 
         else:
-            output_sensitivity_array = np.ones(10)
-            #output_sensitivity_array[training_lables[i]] = -1.0
+            output_sensitivity_array = np.ones(10)*0.1
+            output_sensitivity_array[training_lables[j]] = -1.0
             fc6.backward(output_sensitivity_array)
             fc6.update()
             fc5.backward(fc6.delta_array)
