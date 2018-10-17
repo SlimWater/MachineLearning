@@ -171,8 +171,8 @@ def loadData_test():
 #test()
 #test_bp()
 #test_bp()
-#gradient_check()
+gradient_check()
 #polling_test()
 #fc_test()
-loadData_test()
+#loadData_test()
 

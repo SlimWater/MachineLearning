@@ -282,3 +282,21 @@ class fc(object):
     def update(self):
         for filter in self.filters:
             filter.update(self.learning_rate)
+
+class cost_func:
+    def __init__(self):
+    class softmax:
+        def __self__(self):
+            def forward(self, X):
+                exps = np.exp(X - np.max(X))
+                return exps / np.sum(exps)
+            def backward(self):
+                
+    def MSE(self,x,y):
+        return (y-x)**2
+    def cross_entropy(self, X,y):
+        m = y.shape[0]
+        p = softmax(X)
+        log_likelihood = -np.log(p[range(m), y])
+        loss = np.sum(log_likelihood) / m
+        return loss
