@@ -282,21 +282,29 @@ class fc(object):
     def update(self):
         for filter in self.filters:
             filter.update(self.learning_rate)
+class softmax:
+    def forward(self, X):
+        exps = np.exp(X - np.max(X))
+        exps = exps /np.sum(exps)
+        exps[exps < 1e-9] = 1e-9
+        return exps 
+    def backward(self,X):
+        exps = self.forward(X)
+        delta = np.zeros((X.size, X.size),np.float32)
+        for i in range(X.size):
+            delta[i,i] = 1.0
+        for i in range(X.size):
+            for j in range(X.size):
+                delta[i,j] = exps[i]*(delta[i,j] - exps[j])
+        return delta
 
-class cost_func:
-    def __init__(self):
-    class softmax:
-        def __self__(self):
-            def forward(self, X):
-                exps = np.exp(X - np.max(X))
-                return exps / np.sum(exps)
-            def backward(self):
-                
-    def MSE(self,x,y):
-        return (y-x)**2
-    def cross_entropy(self, X,y):
-        m = y.shape[0]
-        p = softmax(X)
-        log_likelihood = -np.log(p[range(m), y])
-        loss = np.sum(log_likelihood) / m
-        return loss
+
+class cost_function:
+    class cross_entropy:
+        def forward(self, X,y):
+            m = y.shape[0]
+            log_likelihood = -np.log(X)*y
+            loss = np.sum(log_likelihood) 
+            return loss
+        def backward(self, X,y):
+            return y/X 
