@@ -8,10 +8,10 @@ importlib.reload(cnn)
 importlib.reload(loadData)
 
 
-file_path_tl = '/home/xinying/PycharmProjects/MachineLearning/dataset/mnist/test_labels'
-file_path_ti = '/home/xinying/PycharmProjects/MachineLearning/dataset/mnist/test_images'
-file_path_trl = '/home/xinying/PycharmProjects/MachineLearning/dataset/mnist/training_labels'
-file_path_tri = '/home/xinying/PycharmProjects/MachineLearning/dataset/mnist/training_images'
+file_path_tl = '/home/xinying/MachineLearning/dataset/test_label'
+file_path_ti = '/home/xinying/MachineLearning/dataset/test_image'
+file_path_trl = '/home/xinying/MachineLearning/dataset/training_label'
+file_path_tri = '/home/xinying/MachineLearning/dataset/training_image'
 test_lables = loadData.mnist.load_test_labels(file_path_tl)
 test_images = loadData.mnist.load_test_images(file_path_ti)
 training_lables = loadData.mnist.load_training_labels(file_path_trl)
