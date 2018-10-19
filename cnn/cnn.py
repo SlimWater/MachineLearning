@@ -161,7 +161,7 @@ class ConvLayer(object):
 
 class Filter(object):
     def __init__(self, depth, height, width):
-        self.weights = np.random.uniform(-1e-4, 1e-4,(depth,height, width))
+        self.weights = np.random.uniform(-1e-2, 1e-2,(depth,height, width))
         self.bias = 0
         self.weights_grad = np.zeros(self.weights.shape)
         self.bias_grad = 0
@@ -284,19 +284,23 @@ class fc(object):
             filter.update(self.learning_rate)
 class softmax:
     def forward(self, X):
+        self.input = X
         exps = np.exp(X - np.max(X))
         exps = exps /np.sum(exps)
-        exps[exps < 1e-9] = 1e-9
-        return exps 
-    def backward(self,X):
-        exps = self.forward(X)
-        delta = np.zeros((X.size, X.size),np.float32)
-        for i in range(X.size):
-            delta[i,i] = 1.0
-        for i in range(X.size):
-            for j in range(X.size):
-                delta[i,j] = exps[i]*(delta[i,j] - exps[j])
-        return delta
+        exps[exps < 1e-14] = 1e-14
+        self.output = exps 
+        return self.output
+    def backward(self,sensitivity):
+        exps = self.output
+        sz = self.input.size
+        grad = np.zeros((sz,sz),np.float32)
+        for i in range(sz):
+            grad[i,i] = 1.0
+        for i in range(sz):
+            for j in range(sz):
+                grad[i,j] = exps[i]*(grad[i,j] - exps[j])
+        self.delta = np.sum(grad, axis = 0)
+        self.delta = self.delta*sensitivity       
 
 
 class cost_function:

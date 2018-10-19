@@ -195,6 +195,6 @@ def cross_entropy():
 #gradient_check()
 #polling_test()
 #fc_test()
-#loadData_test()
+loadData_test()
 #softmax_test()
 #cross_entropy()
