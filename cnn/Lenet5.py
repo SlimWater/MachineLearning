@@ -3,6 +3,9 @@ import loadData
 import importlib
 import numpy as np
 import copy
+import matplotlib.pyplot as plt
+plt.switch_backend('TkAgg')
+
 #make sure module is updated
 #importlib.reload(cnn)
 #importlib.reload(loadData)
@@ -17,8 +20,8 @@ test_images = loadData.mnist.load_test_images(file_path_ti)
 training_lables = loadData.mnist.load_training_labels(file_path_trl)
 training_images = loadData.mnist.load_training_images(file_path_tri)
 epoches  = 1
-learning_rate = 0.1
-num_training = 60
+learning_rate = 0.00001
+num_training = 5000
 success_count = 0
 relu = cnn.ReluActivator()
 # lenet5 INPUT(32X32)->Conv1(6X28X28)->Submap2(6X14X14)->Conv3(16X10X10)->Submap4(16X5X5)->fc5(120)->fc6(84)->output(10)
@@ -42,6 +45,10 @@ for filter in fc6.filters:
 label_vec = np.zeros(10)
 print('start training')
 ####Training######
+fig = plt.figure(1)
+fig.show()
+fig.canvas.draw()
+error_rate = []
 for i in range(epoches):
     success_count = 0
     for j in range(num_training):
@@ -58,12 +65,14 @@ for i in range(epoches):
         fc5.forward(submap4.output_array)
         #print(fc5.output_array)
         fc6.forward(fc5.output_array)
-        print(fc6.output_array)
+       # print(fc6.output_array)
         #print(training_lables[j], fc6.output_array.argmax())
         softmax.forward(fc6.output_array)
         loss = cross_entropy.forward(softmax.output, label_vec) 
+  
         if(label == np.argmax(fc6.output_array)):
             success_count += 1
+
         else:
             output_sensitivity_array =loss * cross_entropy.backward(softmax.output, label_vec) 
             softmax.backward(output_sensitivity_array)
@@ -77,6 +86,10 @@ for i in range(epoches):
             submap2.backward(conv3.delta_array)
             conv1.backward(submap2.delta_array)
             conv1.update()
+        if(j%10 == 0):
+            error_rate.append(success_count/10)
+            success_count = 0;
+        plt.plot(error_rate, 'b-')   
+        fig.canvas.draw()
+plt.show()
 
-    error_rate = success_count
-    print("Error rate for epoche %d is: %f" % (i,error_rate))
