@@ -64,37 +64,13 @@ def init_test():
           [1,2,1]]])
     relu = cnn.ReluActivator()
     cl = cnn.ConvLayer(5,5,3,3,3,2,1,2,relu,0.001)
-    cl.filters[0].weights = np.array(
-        [[[-1,1,0],
-          [0,1,0],
-          [0,1,1]],
-         [[-1,-1,0],
-          [0,0,0],
-          [0,-1,0]],
-         [[0,0,-1],
-          [0,1,0],
-          [1,-1,-1]]], dtype=np.float64)
-    cl.filters[0].bias=1
-    cl.filters[1].weights = np.array(
-        [[[1,1,-1],
-          [-1,-1,1],
-          [0,-1,1]],
-         [[0,1,0],
-         [-1,0,-1],
-          [-1,1,0]],
-         [[-1,0,0],
-          [-1,0,1],
-          [-1,0,0]]], dtype=np.float64)
-    cl.filters[1].bias = 1
-
     return a, b, cl
 def gradient_check():
-    error_function = lambda o: o.sum()
     a, b, cl = init_test()
     cl.forward(a)
     sensitivity_array = np.ones(cl.output_array.shape, dtype = np.float64)
-    cl.backward(a,sensitivity_array, cl.activator)
-    epsilon = 10e-4
+    cl.backward(sensitivity_array)
+    epsilon = 10e-6
 
     #'''
     for d in range(cl.filters[0].weights_grad.shape[0]):
@@ -102,11 +78,14 @@ def gradient_check():
             for j in range(cl.filters[0].weights_grad.shape[2]):
                 cl.filters[0].weights[d,i,j] += epsilon
                 cl.forward(a)
-                err1 = error_function(cl.output_array)
+                #err1 = error_function(cl.output_array)
+                err1 = np.sum(cl.output_array)
+                print(err1)
                 cl.filters[0].weights[d,i,j] -= 2*epsilon
                 cl.forward(a)
-                err2 = error_function(cl.output_array)
-
+                #err2 = error_function(cl.output_array)
+                err2 = np.sum(cl.output_array)
+                print(err2)
                 expect_grad = (err1 - err2) / (2 * epsilon)
                 cl.filters[0].weights[d,i,j] += epsilon
                 print ('weights(%d,%d,%d): expected - actural %f - %f' % ( d, i, j, expect_grad, cl.filters[0].weights_grad[d,i,j]))
@@ -120,7 +99,7 @@ def test():
 def test_bp():
     a, b, cl = init_test()
     sensitivity_array = np.ones(cl.output_array.shape, dtype=np.float64)
-    cl.backward(a,sensitivity_array, cl.activator)
+    cl.backward(sensitivity_array)
     #cl.update()
 
 #'''
@@ -191,10 +170,9 @@ def cross_entropy():
 
 #test()
 #test_bp()
-#test_bp()
-#gradient_check()
+gradient_check()
 #polling_test()
 #fc_test()
-loadData_test()
+#loadData_test()
 #softmax_test()
 #cross_entropy()

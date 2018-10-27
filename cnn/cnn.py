@@ -32,7 +32,7 @@ class ConvLayer(object):
             filter = self.filters[f]
             self.conv(self.padded_input_array, filter.get_weights(), self.output_array[f], self.stride, filter.get_bias())
 
-            self.output_array[f] = self.elementOP(self.output_array[f], self.activator, "forward")
+           # self.output_array[f] = self.elementOP(self.output_array[f], self.activator, "forward")
         #element_wist_op(self.output_array, self.activator.forward) activation function implementation
 
     def padding(self, input_array, zp):
@@ -85,7 +85,15 @@ class ConvLayer(object):
     #now implement the training functions
     def backward(self, sensitivity_array):
         #self.input_array = input_array
-        #self.padded_input_array = self.padding(input_array, self.zero_padding)
+         self.output_width = (self.input_width - self.filter_width + 2*self.zero_padding)/self.stride +1
+        self.output_height= (self.input_height - self.filter_height + 2*self.zero_padding)/self.stride +1
+        self.output_array = np.zeros((int(self.filter_number), int(self.output_height), int(self.output_width)))
+        for i in range(filter_number):
+            self.filters.append(Filter( channel_number,  filter_height,filter_width))
+        self.delta_array = self.create_delta_array()
+        self.activator = activator
+        self.learning_rate = learning_rate
+       #self.padded_input_array = self.padding(input_array, self.zero_padding)
         #sensitivity_array: current layer sensitivity_map
         #upper layer activation function
         #to calculate upper layer sensitivity_map
